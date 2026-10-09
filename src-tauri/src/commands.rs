@@ -53,11 +53,11 @@ fn common_suffix_chars(labels: &[String]) -> usize {
 }
 
 fn distinctive_names(labels: &[String]) -> Vec<String> {
-    if labels.len() <= 1 {
-        return labels.to_vec();
-    }
     let prefix = common_prefix_chars(labels);
     let suffix = common_suffix_chars(labels);
+    let same_stem = labels
+        .windows(2)
+        .all(|w| Path::new(&w[0]).file_stem() == Path::new(&w[1]).file_stem());
     labels
         .iter()
         .map(|label| {
@@ -66,9 +66,14 @@ fn distinctive_names(labels: &[String]) -> Vec<String> {
             let end = total.saturating_sub(suffix);
             let start = prefix.min(end);
             let d: String = chars[start..end].iter().collect();
-            let d = d.trim_matches(|c: char| c == '_' || c == '-' || c == '.');
+            let d = d.trim_matches(|c: char| matches!(c, '_' | '-' | '.' | '/' | '\\'));
+            let stem = Path::new(label)
+                .file_stem()
+                .map_or_else(|| label.clone(), |s| s.to_string_lossy().into_owned());
             if d.is_empty() {
-                label.clone()
+                stem
+            } else if same_stem {
+                format!("{d}/{stem}")
             } else {
                 d.to_string()
             }
@@ -77,7 +82,10 @@ fn distinctive_names(labels: &[String]) -> Vec<String> {
 }
 
 fn recompute_scenarios(entries: &mut [FileEntry]) {
-    let labels: Vec<String> = entries.iter().map(|e| e.file.label.clone()).collect();
+    let labels: Vec<String> = entries
+        .iter()
+        .map(|e| e.file.path.to_string_lossy().into_owned())
+        .collect();
     let names = distinctive_names(&labels);
     for (entry, name) in entries.iter_mut().zip(names.iter()) {
         if !entry.customized {

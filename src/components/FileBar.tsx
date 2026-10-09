@@ -33,6 +33,10 @@ export function FileBar({ files, onOpen, onOpenFolder, onRemove, onRename, onRes
     onOpenFolder(path);
   }
 
+  let commonDir = files[0]?.path ?? "";
+  for (const f of files) while (!f.path.startsWith(commonDir)) commonDir = commonDir.slice(0, -1);
+  commonDir = commonDir.slice(0, Math.max(commonDir.lastIndexOf("/"), commonDir.lastIndexOf("\\")) + 1);
+
   const label =
     files.length === 0
       ? "No files loaded"
@@ -95,7 +99,7 @@ export function FileBar({ files, onOpen, onOpenFolder, onRemove, onRename, onRes
                   <tbody>
                     {files.map((f) => (
                       <tr key={f.path}>
-                        <td title={f.path}>{f.label}</td>
+                        <td title={f.path}>{f.path.slice(commonDir.length)}</td>
                         <td>
                           <input
                             type="text"
